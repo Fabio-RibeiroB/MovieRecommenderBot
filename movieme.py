@@ -7,7 +7,7 @@ import os
 
 load_dotenv()
 
-logger = logging.getLogger("m!")
+logger = logging.getLogger("movieme")
 logger.setLevel(logging.INFO)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
@@ -19,7 +19,7 @@ logger.addHandler(console_handler)
 intents = discord.Intents.all()
 intents.members = True
 
-client = commands.Bot(command_prefix = "m!", intents = intents)
+client = commands.Bot(command_prefix = "$", intents = intents)
 
 @client.event
 async def on_ready():
@@ -28,8 +28,8 @@ async def on_ready():
 async def get_message(ctx):
     """Get movies from message"""
     logger.info("Retrieving movies...")
-    message = ctx.channel.history(limit=1)
-    message = message.lstrip('m! ').split(') ')
+    message = ctx.message.content.lstrip(f"{client.command_prefix}movieme ")
+    message = message.split(' and ')
     return message
 
 logger.info("Reading MovieLens data...")
@@ -41,7 +41,9 @@ ratings = pd.read_csv("ratings.csv")
 movie_ratings = ratings.pivot_table(index="movieId", values="rating", aggfunc="mean")
 
 # Function to recommend a new movie based on two movies specified by the user
-async def recommend_movie(movie1, movie2):
+def recommend_movie(movie1, movie2):
+    print(movie1)
+    print(movie2)
     # Look up the two movies in the movies dataset
     movie1_details = movies[movies["title"] == movie1]
     movie2_details = movies[movies["title"] == movie2]
@@ -77,8 +79,12 @@ async def recommend_movie(movie1, movie2):
 @client.command()
 async def movieme(ctx):
     logger.info("Starting recommendations..")
-    movies = await get_recent_message(ctx)
+    movies = await get_message(ctx)
+    if len(movies) < 2:
+        await ctx.send("Please specify at least 2 movies with years.")
+        return
     recommendation = recommend_movie(movies[0], movies[1])
+
     await ctx.send(recommendation)
 
 client.run(os.getenv("TOKEN")) 
